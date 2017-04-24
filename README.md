@@ -1,5 +1,5 @@
 # ntc
-Label Noise Tolerance Logistic Regression Models 
+Label {N}oise {T}olerance Logistic Regression {C}lassifiers 
 
 A library of label-noise robust logistic regression written in Julia
 
