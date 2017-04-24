@@ -1,12 +1,12 @@
 # ntc
 Label {N}oise {T}olerance Logistic Regression {C}lassifiers 
 
-A library of label-noise robust logistic regression written in Julia
+A library for training label-noise robust logistic regression written in Julia.
 
 
 The library includes
-- robust Logistic Regression (rLR) for class-dependent labal noise
-- generalised robust Logistic Regression (gLR) for instance-dependent label noise
+- robust Logistic Regression (rLR) for class-dependent labal noise [1]
+- generalised robust Logistic Regression (gLR) for instance-dependent label noise [2]
 
 ## Installation 
 ```
@@ -83,3 +83,7 @@ end
 
 @printf("[Mean] rlr = %.2f , glr = %.2f \n", mean(err_rlr), mean(err_glr))
 ```
+
+## References
+[1] J. Bootkrajang, A. Kaban: Label-noise Robust Logistic Regression and its Applications, The European Conference on Machine Learning and Principles and Practice of Knowledge Discovery in Databases (ECML-PKDD 2012), 24-28 September 2012, Bristol, UK. 
+[2] J. Bootkrajang: A Generalised Label Noise Model for Classification in the Presence of Annotation Errors, Neurocomputing 
