@@ -86,4 +86,4 @@ end
 
 ## References
 - [1] J. Bootkrajang, A. Kaban: Label-noise Robust Logistic Regression and its Applications, The European Conference on Machine Learning and Principles and Practice of Knowledge Discovery in Databases (ECML-PKDD 2012), 24-28 September 2012, Bristol, UK. 
-- [2] J. Bootkrajang: A Generalised Label Noise Model for Classification in the Presence of Annotation Errors,Neurocomputing 192 (2016): 61-71 
+- [2] J. Bootkrajang: A Generalised Label Noise Model for Classification in the Presence of Annotation Errors, Neurocomputing 192 (2016): 61-71 
