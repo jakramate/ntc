@@ -27,13 +27,9 @@
 #  |   1 | g10   g00 |
 #  |-----|-----------|
 # ==========================================================================
-# ==========================================================================
-include("gradt0.jl")
-include("gradt1.jl")
-include("gradw_nr.jl")
-include("../density/gammapdf.jl")
+# ==========================================================================:w
 
-function nlr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
+function glr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
     
     ndata, dim = size(x)
     
@@ -57,6 +53,9 @@ function nlr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
     # parameters to the gamma function
     t0 = [500]
     t1 = [500]
+    t  = x * w     
+    z  = t./norm(w)
+    lambda = regParam(w, "noreg", sn)
     
     ## ========================= BEGIN ESTIMATING PARAMETERS ===========================
     for l=1:maxIter 
@@ -66,7 +65,6 @@ function nlr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
     
         # no regularisation and use uniform noise on the first iter
         if l==1
-            lambda = regParam(w, "noreg", sn)
             g01    = ones(size(y)) * 0.2
             g10    = ones(size(y)) * 0.2
         else        
@@ -76,7 +74,7 @@ function nlr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
     
          
         # optimising the weight vector         
-        w, fw, i = minimize(w, gradw_nr, 5, g01, g10, x, y, bReg0, bReg1, lambda, regType)
+        w, fw, i = minimize(w, gradw_glr, 5, g01, g10, x, y, bReg0, bReg1, lambda, regType)
 
         # update z based on new weight vector
         t = x * w     
@@ -103,3 +101,110 @@ function nlr(w, x, y; sn=1e-8, maxIter=50, estG=true, regType="noreg")
     return w, t0, t1, llh
 
 end
+
+
+
+# function definition for 'minFunc' optimiser
+# fv  = function value
+# dfv = gradient of the function w.r.t W
+# for non-uniform noise rate model
+
+function gradw_glr(w, g01, g10, x, y, bReg0, bReg1, lambda, regType)
+
+    regV, regDV = regFunc(w, regType, 1e-8)
+
+    t  =  x * w
+
+    s0 = ((1-g01) .* (1 ./ ((1 ./ exp(-t))+1))) + (g10 ./ (1+exp(-t)))
+    s1 = (g01 .* (1 ./ ((1 ./ exp(-t))+1))) + ((1-g10) ./ (1+exp(-t)))
+
+    s0[s0.==0] = eps() 
+    s1[s1.==0] = eps()
+
+    # function value
+    fv  = -sum((y .* log(s1)) + ((1 - y) .* log(s0)),1) + sum(lambda .* regV) + bReg0 + bReg1
+    
+    # compute corresponding derivative
+    tmp1 = ((1-g10) - g01) .* (y ./ s1)
+    tmp2 = (g10 - (1-g01)) .* ((1 - y) ./ s0)
+
+
+    gAux1 = (tmp1 + tmp2) ./ (1+exp(-t)) .* (1 ./ ((1 ./ exp(-t))+1))
+
+    # completed Eq.34 with dot product with x_n
+    gAux2  = repmat(gAux1, 1, size(x,2)) .* x
+    dfv    = -sum(gAux2,1)' + (lambda .* regDV)
+
+    return fv[1], dfv
+
+end
+
+
+# computing gradient of the nlr's objective w.r.t
+# the parameter of the gamma's PDF
+function gradt1(t1, z, t, y, t0, regW, bReg0, bReg1)
+
+    g01 = gammapdf(z,1,t0)
+    g10 = gammapdf(z,1,t1)
+    g00 = 1 - g01
+    g11 = 1 - g10
+
+    p1 = 1 ./ (1+exp(-t))
+    p0 = 1-p1
+
+    # computing function value
+    s0 = (g00 .* p0) + (g10 .* p1)
+    s1 = (g01 .* p0) + (g11 .* p1)
+
+    s0[s0.==0] = eps() 
+    s1[s1.==0] = eps()
+
+    fv = -sum((y .* log(s1)) + ((1 - y).* log(s0)),1) + regW + bReg0 .* log(t0-1) + bReg1.*log(t1-1)
+
+    # computing corresponding derivative
+    tmp1  = ((1 - y) ./ s0) - (y ./ s1)
+    tmp2  = ((g10 .* z ./ t1.^2) - (g10 ./t1))
+
+    gAux1 = (tmp1 .* tmp2) .* p1
+    dfv   = -sum(gAux1,1)' + bReg1 ./ log(t1-1)
+
+    return fv[1], dfv
+
+end
+
+
+# computing gradient of nlr objective function w.r.t. gamma PDF's parameter
+#
+#
+function gradt0(t0, z, t, y, t1, regW, bReg0, bReg1)
+
+    g01 = gammapdf(z,1,t0)
+    g10 = gammapdf(z,1,t1)
+    g00 = 1 - g01
+    g11 = 1 - g10
+
+    p1  = 1 ./ (1+exp(-t))
+    p0  = 1 - p1
+
+    # computing function value
+    s0  = (g00 .* p0) + (g10 .* p1)
+    s1  = (g01 .* p0) + (g11 .* p1)
+
+    s0[s0.==0] = eps() 
+    s1[s1.==0] = eps()
+
+    fv = -sum((y .* log(s1)) + ((1 - y).* log(s0)),1) + regW + bReg0.*log(t0-1) + bReg1.*log(t1-1)
+
+    # computing corresponding derivative
+    tmp1  = ((y ./ s1) - ((1 - y) ./ s0))
+    tmp2  = ((g01 .* z ./ t0.^2) + (g01 ./t0))
+
+    gAux1  = (tmp1 .* tmp2) .* p0
+    dfv    = sum(gAux1,1)' + bReg0 ./ log(t0-1)
+
+
+    return fv[1], dfv
+
+end
+
+

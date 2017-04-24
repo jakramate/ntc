@@ -4,6 +4,7 @@ function minimize(X, f, nFeval, varargin...)
 # X is a column vector
 # f must also return column vector of partial derivatives
 
+# A Julia implementation of minimize.m 
 
 # Minimize a differentiable multivariate function. 
 #
